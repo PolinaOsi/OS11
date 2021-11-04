@@ -37,7 +37,7 @@ void unlockMutex(int num){
 
 void initMutexes(){
     if(pthread_mutexattr_init(&mattr)){
-	perror("Mutex initilization error\n");
+	perror("Attributes initilization error\n");
 	exit(EXIT_FAILURE);
     }
     if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK)){
@@ -47,7 +47,7 @@ void initMutexes(){
     for(int i = 0; i < MUTEX_COUNT; ++i){
         if(pthread_mutex_init(&mutexes[i], &mattr)){
             destroyMutexes(i);
-            perror("Mutex creation error");
+            perror("Mutex initilization error");
             exit(EXIT_FAILURE);
         }
     }
