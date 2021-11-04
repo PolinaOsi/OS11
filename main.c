@@ -36,7 +36,10 @@ void unlockMutex(int num){
 }
 
 void initMutexes(){
-    pthread_mutexattr_init(&mattr);
+    if(pthread_mutexattr_init(&mattr)){
+	perror("Mutex initilization error\n");
+	exit(EXIT_FAILURE);
+    }
     if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK)){
 	perror("Attributes creation error\n");
 	exit(EXIT_FAILURE);
