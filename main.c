@@ -5,10 +5,7 @@
 
 #define MUTEX_COUNT 3
 
-pthread_mutexattr_t mattr;
-pthread_mutex_t mutexes[MUTEX_COUNT];
-
-void destroyMutexes(int count){
+void destroyMutexes(int count, pthread_mutex_t* mutexes){
     for(int i = 0; i < count; ++i){
         if(pthread_mutex_destroy(&mutexes[i]) < 0){
             perror("Destoying mutex error");
@@ -17,25 +14,26 @@ void destroyMutexes(int count){
     }
 }
 
-void atExit(char* str){
-    destroyMutexes(MUTEX_COUNT);
+void atExit(char* str, pthread_mutex_t* mutexes){
+    destroyMutexes(MUTEX_COUNT, mutexes);
     perror(str);
     exit(EXIT_FAILURE); 
 }
 
-void lockMutex(int num){
+void lockMutex(int num, pthread_mutex_t* mutexes){
     if(pthread_mutex_lock(&mutexes[num])){
-         atExit("Mutex lock error");
+         atExit("Mutex lock error", mutexes);
     }
 }
 
-void unlockMutex(int num){
+void unlockMutex(int num, pthread_mutex_t* mutexes){
     if(pthread_mutex_unlock(&mutexes[num])){ 
-        atExit("Mutex unlock error");
+        atExit("Mutex unlock error", mutexes);
     }
 }
 
-void initMutexes(){
+void initMutexes(pthread_mutex_t* mutexes){
+    pthread_mutexattr_t mattr;
     if(pthread_mutexattr_init(&mattr)){
 	perror("Attributes initilization error\n");
 	exit(EXIT_FAILURE);
@@ -46,63 +44,57 @@ void initMutexes(){
     }
     for(int i = 0; i < MUTEX_COUNT; ++i){
         if(pthread_mutex_init(&mutexes[i], &mattr)){
-            destroyMutexes(i);
+            destroyMutexes(i, mutexes);
             perror("Mutex initilization error");
             exit(EXIT_FAILURE);
         }
     }
 }
 
-void* secondPrint(void* param){
-    lockMutex(2);
-    for(int i = 0; i < 10; ++i){
-        lockMutex(1);
-        if(printf("Child: %d\n", i) < 0){
-            atExit("2nd thread printing error");
-        }
-        unlockMutex(2);
-        lockMutex(0);
-        unlockMutex(1);
-        lockMutex(2);
-        unlockMutex(0);
+void Print(int num, pthread_mutex_t* mutexes){
+    if(num == 2){
+    	lockMutex(2, mutexes);
     }
-    unlockMutex(2);
+    for(int i = 0; i < 10; ++i){
+	lockMutex((num + 2) % 3, mutexes);
+        if(printf("Thread %d: %d\n", num, i) < 0){
+            atExit("1st thread printing error", mutexes);
+        }
+        unlockMutex(num, mutexes);
+        lockMutex((num + 1) % 3, mutexes);
+        unlockMutex((num + 2) % 3, mutexes);
+        lockMutex(num, mutexes);
+        unlockMutex((num + 1) % 3, mutexes);
+    }
+    unlockMutex(num, mutexes);
+}
+
+void* secondPrint(void* param){
+    pthread_mutex_t* mutexes = (pthread_mutex_t*)param;
+    Print(2, mutexes);
     return NULL;
 }
-void firstPrint(){
-    for(int i = 0; i < 10; ++i){
-        if(printf("Parent: %d\n", i) < 0){
-            atExit("1st thread printing error");
-        }
-        lockMutex(0);
-        unlockMutex(1);
-        lockMutex(2);
-        unlockMutex(0);
-        lockMutex(1);
-        unlockMutex(2);
-    }
-    unlockMutex(1);
-}
+
 int main(int argc, char **argv){
     pthread_t thread;
+    pthread_mutex_t mutexes[MUTEX_COUNT];
+    initMutexes(mutexes);
+    lockMutex(1, mutexes);
 
-    initMutexes();
-    lockMutex(1);
-
-    if (pthread_create(&thread, NULL, secondPrint, NULL)){
-        atExit("Creating thread error");
+    if (pthread_create(&thread, NULL, secondPrint, mutexes)){
+        atExit("Creating thread error", mutexes);
     }
 
     if(sleep(1)){
-        atExit("Sleep error");
+        atExit("Sleep error", mutexes);
     }
 
-    firstPrint();
+    Print(1, mutexes);
 
     if (pthread_join(thread,NULL)){
-        atExit("Thread join error");
+        atExit("Thread join error", mutexes);
     }
 
-    destroyMutexes(MUTEX_COUNT);
+    destroyMutexes(MUTEX_COUNT, mutexes);
     exit(0);
 }
