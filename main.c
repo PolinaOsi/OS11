@@ -103,7 +103,7 @@ int main(int argc, char **argv){
 
     Print(1, mutexes);
 
-     err = pthread_join(thread,NULL);
+    err = pthread_join(thread,NULL);
     if(err != SUCCESS){
         atExit(err, "Thread join error", mutexes);
     }
