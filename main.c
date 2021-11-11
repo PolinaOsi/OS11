@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 
 #define MUTEX_COUNT 3
@@ -24,14 +25,14 @@ void atExit(int err, char* str, pthread_mutex_t* mutexes){
     exit(EXIT_FAILURE); 
 }
 
-void lockMutex(int num, pthread_mutex_t* mutex){
+void lockMutex(pthread_mutex_t* mutex){
     int err = pthread_mutex_lock(mutex);
     if(err != SUCCESS){
          atExit(err, "Mutex lock error", mutexes);
     }
 }
 
-void unlockMutex(int num, pthread_mutex_t* mutexes){
+void unlockMutex(pthread_mutex_t* mutex){
     int err = pthread_mutex_unlock(mutex);
     if(err != SUCCESS){
         atExit(err, "Mutex unlock error", mutexes);
@@ -67,18 +68,18 @@ void initMutexes(pthread_mutex_t* mutexes){
 
 void Print(int num, pthread_mutex_t* mutexes){
     if(num == 2){
-    	lockMutex(2, mutexes);
+    	lockMutex(&mutexes[2]);
     }
     for(int i = 0; i < 10; ++i){
-	lockMutex((num + 2) % 3, mutexes);
+	lockMutex(&mutexes[(num + 2) % 3]);
         printf("Thread № %d: %d\n", num, i);
-        unlockMutex(num, mutexes);
-        lockMutex((num + 1) % 3, mutexes);
-        unlockMutex((num + 2) % 3, mutexes);
-        lockMutex(num, mutexes);
-        unlockMutex((num + 1) % 3, mutexes);
+        unlockMutex(&mutexes[num]);
+        lockMutex(&mutexes[(num + 1) % 3]);
+        unlockMutex(&mutexes[(num + 2) % 3]);
+        lockMutex(&mutexes[num]);
+        unlockMutex(&mutexes[(num + 1) % 3]);
     }
-    unlockMutex(num, mutexes);
+    unlockMutex(&mutexes[num]);
 }
 
 void* secondPrint(void* param){
