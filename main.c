@@ -7,35 +7,39 @@
 #define MUTEX_COUNT 3
 #define SUCCESS 0
 #define ERROR 1
+#define SECOND 1
+#define FIRST_MUTEX 1
+#define SECOND_MUTEX 2
+#define FIRST_THREAD 1
+#define SECOND_THREAD 2
 
-void destroyMutexes(int count, pthread_mutex_t* mutexes){
+int destroyMutexes(int count, pthread_mutex_t* mutexes){
     for(int i = 0; i < count; ++i){
         errno = pthread_mutex_destroy(&mutexes[i]);
 	if(errno != SUCCESS){
             perror("Destoying mutex error");
-            exit(EXIT_FAILURE);
-        }
+            return errno;
+	}
     }
 }
 
 void atExit(char* str, pthread_mutex_t* mutexes){
-    destroyMutexes(MUTEX_COUNT, mutexes);
     perror(str);
+    destroyMutexes(MUTEX_COUNT, mutexes);
     exit(EXIT_FAILURE); 
 }
 
-void lockMutex(int num, pthread_mutex_t* mutexes){
-    errno = pthread_mutex_lock(&mutexes[num]);
+int lockMutex(int mutex_num, pthread_mutex_t* mutexes){
+    errno = pthread_mutex_lock(&mutexes[mutex_num]);
     if(errno != SUCCESS){
-         atExit("Mutex lock error", mutexes);
+         perror("Mutex lock error");
     }
+    return errno;
 }
 
-void unlockMutex(int num, pthread_mutex_t* mutexes){
-    errno = pthread_mutex_unlock(&mutexes[num]);
-    if(errno != SUCCESS){
-        atExit("Mutex unlock error", mutexes);
-    }
+int unlockMutex(int mutex_num, pthread_mutex_t* mutexes){
+    
+    return errno;
 }
 
 int initMutexes(pthread_mutex_t* mutexes){
@@ -63,25 +67,41 @@ int initMutexes(pthread_mutex_t* mutexes){
     return SUCCESS;
 }
 
-void Print(int num, pthread_mutex_t* mutexes){
-    if(num == 2){
-    	lockMutex(2, mutexes);
+void Print(int thread_number, pthread_mutex_t* mutexes){
+    int cur_mutex = FIRST_MUTEX;
+    if(thread_number == SECOND_THREAD){
+	errno = pthread_mutex_lock(&mutexes[SECOND_MUTEX]);
+    	if(errno != SUCCESS){
+            perror("Mutex lock error");
+	    return;
+    	}
+	cur_mutex = SECOND_MUTEX;
     }
     for(int i = 0; i < 10; ++i){
-	lockMutex((num + 2) % 3, mutexes);
-        printf("Thread № %d: %d\n", num, i);
-        unlockMutex(num, mutexes);
-        lockMutex((num + 1) % 3, mutexes);
-        unlockMutex((num + 2) % 3, mutexes);
-        lockMutex(num, mutexes);
-        unlockMutex((num + 1) % 3, mutexes);
+    	int next_mutex = (cur_mutex + 2) % 3;
+	errno = pthread_mutex_lock(&mutexes[next_mutex]);
+    	if(errno != SUCCESS){
+            perror("Mutex lock error");
+		return;
+    	}
+        printf("Thread № %d: %d\n", thread_number, i);
+	errno = pthread_mutex_unlock(&mutexes[cur_mutex]);
+    	if(errno != SUCCESS){
+            perror("Mutex unlock error");
+	    return;
+    	}
+	cur_mutex = next_mutex;
     }
-    unlockMutex(num, mutexes);
+    errno = pthread_mutex_unlock(&mutexes[thread_number]);
+    if(errno != SUCCESS){
+        perror("Mutex unlock error");
+        return;
+    }
 }
 
 void* secondPrint(void* param){
     pthread_mutex_t* mutexes = (pthread_mutex_t*)param;
-    Print(2, mutexes);
+    Print(SECOND_THREAD, mutexes);
     return NULL;
 }
 
@@ -91,16 +111,20 @@ int main(int argc, char **argv){
     if(initMutexes(mutexes) != SUCCESS){
     	exit(EXIT_FAILURE);
     };
-    lockMutex(1, mutexes);
-    
+    errno = pthread_mutex_lock(&mutexes[FIRST_MUTEX]);
+    if(errno != SUCCESS){
+        atExit("Mutex lock error", mutexes);
+        return;
+    }
+	
     errno = pthread_create(&thread, NULL, secondPrint, mutexes);
     if(errno != SUCCESS){
         atExit("Creating thread error", mutexes);
     }
 
-    sleep(1);
+    sleep(SECOND);
 
-    Print(1, mutexes);
+    Print(FIRST_THREAD, mutexes);
 
     errno = pthread_join(thread,NULL);
     if(errno != SUCCESS){
