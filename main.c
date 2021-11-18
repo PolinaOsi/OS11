@@ -79,7 +79,7 @@ void Print(int thread_number, pthread_mutex_t* mutexes){
     	}
 	cur_mutex = next_mutex;
     }
-    errno = pthread_mutex_unlock(&mutexes[thread_number]);
+    errno = pthread_mutex_unlock(&mutexes[cur_mutex]);
     if(errno != SUCCESS){
         perror("Mutex unlock error");
         return;
@@ -101,7 +101,6 @@ int main(int argc, char **argv){
     errno = pthread_mutex_lock(&mutexes[FIRST_MUTEX]);
     if(errno != SUCCESS){
         atExit("Mutex lock error", mutexes);
-        return;
     }
 	
     errno = pthread_create(&thread, NULL, secondPrint, mutexes);
