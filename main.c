@@ -6,62 +6,58 @@
 
 #define MUTEX_COUNT 3
 #define SUCCESS 0
+#define ERROR 1
 
 void destroyMutexes(int count, pthread_mutex_t* mutexes){
     for(int i = 0; i < count; ++i){
-        int err = pthread_mutex_destroy(&mutexes[i]);
-	if(err != SUCCESS){
-	    errno = err;
+        errno = pthread_mutex_destroy(&mutexes[i]);
+	if(errno != SUCCESS){
             perror("Destoying mutex error");
             exit(EXIT_FAILURE);
         }
     }
 }
 
-void atExit(int err, char* str, pthread_mutex_t* mutexes){
+void atExit(char* str, pthread_mutex_t* mutexes){
     destroyMutexes(MUTEX_COUNT, mutexes);
-    errno = err;
     perror(str);
     exit(EXIT_FAILURE); 
 }
 
 void lockMutex(int num, pthread_mutex_t* mutexes){
-    int err = pthread_mutex_lock(&mutexes[num]);
-    if(err != SUCCESS){
-         atExit(err, "Mutex lock error", mutexes);
+    errno = pthread_mutex_lock(&mutexes[num]);
+    if(errno != SUCCESS){
+         atExit("Mutex lock error", mutexes);
     }
 }
 
 void unlockMutex(int num, pthread_mutex_t* mutexes){
-    int err = pthread_mutex_unlock(&mutexes[num]);
-    if(err != SUCCESS){
-        atExit(err, "Mutex unlock error", mutexes);
+    errno = pthread_mutex_unlock(&mutexes[num]);
+    if(errno != SUCCESS){
+        atExit("Mutex unlock error", mutexes);
     }
 }
 
-void initMutexes(pthread_mutex_t* mutexes){
+int initMutexes(pthread_mutex_t* mutexes){
     pthread_mutexattr_t mattr;
-    int err = pthread_mutexattr_init(&mattr);
-    if(err != SUCCESS){
-	errno = err;
+    errno = pthread_mutexattr_init(&mattr);
+    if(errno != SUCCESS){
 	perror("Attributes initilization error\n");
-	exit(EXIT_FAILURE);
+	return ERROR;
     }
 	
-    err = pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK);
-    if(err != SUCCESS){
-	errno = err;
+    errno = pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK);
+    if(errno != SUCCESS){
 	perror("Attributes creation error\n");
-	exit(EXIT_FAILURE);
+	return ERROR;
     }
 	
     for(int i = 0; i < MUTEX_COUNT; ++i){
-        err = pthread_mutex_init(&mutexes[i], &mattr);
-	if(err != SUCCESS){
+        errno = pthread_mutex_init(&mutexes[i], &mattr);
+	if(errno != SUCCESS){
             destroyMutexes(i, mutexes);
-	    errno = err;
             perror("Mutex initilization error");
-            exit(EXIT_FAILURE);
+            return ERROR;
         }
     }
 }
@@ -94,18 +90,18 @@ int main(int argc, char **argv){
     initMutexes(mutexes);
     lockMutex(1, mutexes);
     
-    int err = pthread_create(&thread, NULL, secondPrint, mutexes);
-    if(err != SUCCESS){
-        atExit(err, "Creating thread error", mutexes);
+    errno = pthread_create(&thread, NULL, secondPrint, mutexes);
+    if(errno != SUCCESS){
+        atExit("Creating thread error", mutexes);
     }
 
     sleep(1);
 
     Print(1, mutexes);
 
-    err = pthread_join(thread,NULL);
-    if(err != SUCCESS){
-        atExit(err, "Thread join error", mutexes);
+    errno = pthread_join(thread,NULL);
+    if(errno != SUCCESS){
+        atExit("Thread join error", mutexes);
     }
 
     destroyMutexes(MUTEX_COUNT, mutexes);
