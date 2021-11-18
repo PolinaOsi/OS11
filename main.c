@@ -60,6 +60,7 @@ int initMutexes(pthread_mutex_t* mutexes){
             return ERROR;
         }
     }
+    return SUCCESS;
 }
 
 void Print(int num, pthread_mutex_t* mutexes){
@@ -87,7 +88,9 @@ void* secondPrint(void* param){
 int main(int argc, char **argv){
     pthread_t thread;
     pthread_mutex_t mutexes[MUTEX_COUNT];
-    initMutexes(mutexes);
+    if(initMutexes(mutexes) != SUCCESS){
+    	exit(EXIT_FAILURE);
+    };
     lockMutex(1, mutexes);
     
     errno = pthread_create(&thread, NULL, secondPrint, mutexes);
