@@ -13,20 +13,13 @@
 #define FIRST_THREAD 1
 #define SECOND_THREAD 2
 
-int destroyMutexes(int count, pthread_mutex_t* mutexes){
+void destroyMutexes(int count, pthread_mutex_t* mutexes){
     for(int i = 0; i < count; ++i){
         errno = pthread_mutex_destroy(&mutexes[i]);
 	if(errno != SUCCESS){
             perror("Destoying mutex error");
-            return errno;
 	}
     }
-}
-
-void atExit(char* str, pthread_mutex_t* mutexes){
-    perror(str);
-    destroyMutexes(MUTEX_COUNT, mutexes);
-    exit(EXIT_FAILURE); 
 }
 
 int initMutexes(pthread_mutex_t* mutexes){
@@ -100,12 +93,16 @@ int main(int argc, char **argv){
     };
     errno = pthread_mutex_lock(&mutexes[FIRST_MUTEX]);
     if(errno != SUCCESS){
-        atExit("Mutex lock error", mutexes);
+	perror("Mutex lock error");
+    	destroyMutexes(MUTEX_COUNT, mutexes);
+    	exit(EXIT_FAILURE); 
     }
 	
     errno = pthread_create(&thread, NULL, secondPrint, mutexes);
     if(errno != SUCCESS){
-        atExit("Creating thread error", mutexes);
+	 perror("Creating thread error");
+	 destroyMutexes(MUTEX_COUNT, mutexes);
+   	 exit(EXIT_FAILURE); 
     }
 
     sleep(SECOND);
@@ -114,7 +111,9 @@ int main(int argc, char **argv){
 
     errno = pthread_join(thread,NULL);
     if(errno != SUCCESS){
-        atExit("Thread join error", mutexes);
+	 perror("Thread join error");
+   	 destroyMutexes(MUTEX_COUNT, mutexes);
+   	 exit(EXIT_FAILURE); 
     }
 
     destroyMutexes(MUTEX_COUNT, mutexes);
