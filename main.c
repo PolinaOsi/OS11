@@ -29,19 +29,6 @@ void atExit(char* str, pthread_mutex_t* mutexes){
     exit(EXIT_FAILURE); 
 }
 
-int lockMutex(int mutex_num, pthread_mutex_t* mutexes){
-    errno = pthread_mutex_lock(&mutexes[mutex_num]);
-    if(errno != SUCCESS){
-         perror("Mutex lock error");
-    }
-    return errno;
-}
-
-int unlockMutex(int mutex_num, pthread_mutex_t* mutexes){
-    
-    return errno;
-}
-
 int initMutexes(pthread_mutex_t* mutexes){
     pthread_mutexattr_t mattr;
     errno = pthread_mutexattr_init(&mattr);
