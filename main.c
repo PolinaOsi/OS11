@@ -26,13 +26,13 @@ int initMutexes(pthread_mutex_t* mutexes){
     pthread_mutexattr_t mattr;
     errno = pthread_mutexattr_init(&mattr);
     if(errno != SUCCESS){
-	perror("Attributes initilization error\n");
+	perror("Attributes initilization error");
 	return ERROR;
     }
 	
     errno = pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK);
     if(errno != SUCCESS){
-	perror("Attributes creation error\n");
+	perror("Attributes creation error");
 	return ERROR;
     }
 	
